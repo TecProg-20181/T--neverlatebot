@@ -9,8 +9,9 @@ import sqlalchemy
 
 import db
 from db import Task
+from get_token import *
 
-TOKEN = ""
+TOKEN = get_token()
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
@@ -358,4 +359,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
