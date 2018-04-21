@@ -95,13 +95,15 @@ def handle_updates(updates):
             print('Can\'t process! {}'.format(update))
             return
 
-        command = message["text"].split(" ", 1)[0]
         msg = ''
-        if len(message["text"].split(" ", 1)) > 1:
-            msg = message["text"].split(" ", 1)[1].strip()
+        if 'text' in message: 
+            command = message["text"].split(" ", 1)[0]
+            if len(message["text"].split(" ", 1)) > 1:
+                msg = message["text"].split(" ", 1)[1].strip()
+        else:
+            command = '/start'
 
         chat = message["chat"]["id"]
-
         print(command, msg, chat)
 
         if command == '/new':
