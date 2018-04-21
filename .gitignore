@@ -6,6 +6,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Token
+token.txt
+
+### VisualStudioCode ###
+.vscode/*
+.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history
+
 # C extensions
 *.so
 
