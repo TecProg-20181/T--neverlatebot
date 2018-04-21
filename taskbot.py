@@ -96,13 +96,13 @@ def handle_updates(updates):
             return
 
         msg = ''
-        if 'text' in message: 
+        if 'text' in message:
             command = message["text"].split(" ", 1)[0]
             if len(message["text"].split(" ", 1)) > 1:
                 msg = message["text"].split(" ", 1)[1].strip()
         else:
             command = '/start'
-
+        
         chat = message["chat"]["id"]
         print(command, msg, chat)
 
@@ -248,15 +248,15 @@ def handle_updates(updates):
             query = db.session.query(Task).filter_by(status='TODO', chat=chat).order_by(Task.id)
             a += '\n\U0001F195 *TODO*\n'
             for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
             query = db.session.query(Task).filter_by(status='DOING', chat=chat).order_by(Task.id)
             a += '\n\U000023FA *DOING*\n'
             for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
             query = db.session.query(Task).filter_by(status='DONE', chat=chat).order_by(Task.id)
             a += '\n\U00002611 *DONE*\n'
             for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
 
             send_message(a, chat)
         elif command == '/dependson':
