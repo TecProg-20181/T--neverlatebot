@@ -25,6 +25,7 @@ HELP = """
  /dependson ID ID...
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
+ /duedate ID DUEDATE{AAAA/MM/DD}
  /help
 """
 
@@ -102,12 +103,12 @@ def handle_updates(updates):
                 msg = message["text"].split(" ", 1)[1].strip()
         else:
             command = '/start'
-        
+
         chat = message["chat"]["id"]
         print(command, msg, chat)
 
         if command == '/new':
-            task = Task(chat=chat, name=msg, status='TODO', dependencies='', parents='', priority='')
+            task = Task(chat=chat, name=msg, status='TODO', dependencies='', parents='', priority='', duedate='')
             db.session.add(task)
             db.session.commit()
             send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
@@ -326,7 +327,8 @@ def handle_updates(updates):
 
                 if text == '':
                     task.priority = ''
-                    send_message("_Cleared_ all priorities from task {}".format(task_id), chat)
+                    send_message(
+                        "_Cleared_ all priorities from task {}".format(task_id), chat)
                 else:
                     if text.lower() not in ['high', 'medium', 'low']:
                         send_message("The priority *must be* one of the following: high, medium, low", chat)
@@ -335,6 +337,44 @@ def handle_updates(updates):
                         send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
                 db.session.commit()
 
+        elif command == '/duedate':
+            text = ''
+            if msg != '':
+                if len(msg.split(' ', 1)) > 1:
+                    text = msg.split(' ', 1)[1]
+                msg = msg.split(' ', 1)[0]
+
+            if not msg.isdigit():
+                send_message("You must inform the task id", chat)
+            else:
+                task_id = int(msg)
+                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+                try:
+                    task = query.one()
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message(
+                        "_404_ Task {} not found x.x".format(task_id), chat)
+                    return
+
+                if text == '':
+                    task.duedate = ''
+                    send_message(
+                        "_Cleared_ due date from task {}".format(task_id), chat)
+                else:
+                    text = text.split("/")
+                    text.reverse()
+                    print(text)
+                    if not (1 <= int(text[2]) <= 31 and 1 <= int(text[1]) <= 12 and 1970 <= int(text[0]) <= 2100):
+                        send_message(
+                            "The due date *must be* of the following format: DD/MM/YYYY (including '/')", chat)
+                    else:
+                        from datetime import datetime
+                        task.duedate = datetime.strptime(" ".join(text), '%Y %m %d')
+                        send_message(
+                            "*Task {}* due date has due date *{}*".format(task_id, task.duedate), chat)
+                db.session.commit()
+            print(msg)
+            print(text)
         elif command == '/start':
             send_message("Welcome! Here is a list of things you can do.", chat)
             send_message(HELP, chat)
