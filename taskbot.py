@@ -228,6 +228,7 @@ def handle_updates(updates):
                 send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
 
         elif command == '/list':
+            from datetime import datetime
             a = ''
 
             a += '\U0001F4CB Task List\n'
@@ -239,7 +240,15 @@ def handle_updates(updates):
                 elif task.status == 'DONE':
                     icon = '\U00002611'
 
-                a += '[[{}]] {} {}\n'.format(task.id, icon, task.name)
+                duedate = ' '
+                duedate = task.duedate
+
+                if duedate is None:
+                    duedate = ' '
+                else:
+                    duedate = duedate.strftime('%d/%m/%Y')
+
+                a += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
                 a += deps_text(task, chat)
 
             send_message(a, chat)
@@ -260,6 +269,33 @@ def handle_updates(updates):
                 a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
 
             send_message(a, chat)
+
+            a = ''
+            aux = ''
+            a += '\U0001F4C6 Task List by duedate\n'
+            query = db.session.query(Task).filter_by(parents='', chat=chat).order_by(Task.duedate)
+            for task in query.all():
+                icon = '\U0001F195'
+                if task.status == 'DOING':
+                    icon = '\U000023FA'
+                elif task.status == 'DONE':
+                    icon = '\U00002611'
+
+                duedate = ' '
+                duedate = task.duedate
+
+                if duedate is None:
+                    duedate = ' '
+                    aux += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
+                    aux += deps_text(task, chat)
+                else:
+                    duedate = duedate.strftime('%d/%m/%Y')
+                    a += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
+                    a += deps_text(task, chat)
+
+            a += aux
+            send_message(a, chat)
+
         elif command == '/dependson':
             text = ''
             if msg != '':
