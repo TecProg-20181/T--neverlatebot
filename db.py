@@ -18,6 +18,7 @@ class Task(Base):
     chat = Column(Integer)
     name = Column(String)
     status = Column(String)
+    description = Column(String)
     dependencies = Column(String)
     parents = Column(String)
     priority = Column(String)

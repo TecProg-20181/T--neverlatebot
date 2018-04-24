@@ -108,7 +108,9 @@ def handle_updates(updates):
         print(command, msg, chat)
 
         if command == '/new':
-            task = Task(chat=chat, name=msg, status='TODO', dependencies='', parents='', priority='', duedate='')
+            task = Task(chat=chat, name=msg, status='TODO', description='No description.', dependencies='None', parents='', priority='None', duedate='')
+            from datetime import datetime
+            task.duedate = datetime.strptime(task.duedate, '')
             db.session.add(task)
             db.session.commit()
             send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
@@ -243,7 +245,7 @@ def handle_updates(updates):
                 duedate = ' '
                 duedate = task.duedate
 
-                if duedate is None:
+                if duedate is None or '01/01/1900':
                     duedate = ' '
                 else:
                     duedate = duedate.strftime('%d/%m/%Y')
@@ -284,7 +286,7 @@ def handle_updates(updates):
                 duedate = ' '
                 duedate = task.duedate
 
-                if duedate is None:
+                if duedate is None or '01/01/1900':
                     duedate = ' '
                     aux += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
                     aux += deps_text(task, chat)
@@ -411,12 +413,44 @@ def handle_updates(updates):
                 db.session.commit()
             print(msg)
             print(text)
+        elif command == '/setdescription':
+            text = ''
+            if msg != '':
+                if len(msg.split(' ', 1)) > 1:
+                    text = msg.split(' ', 1)[1]
+                msg = msg.split(' ', 1)[0]
+
+            if not msg.isdigit():
+                send_message("You must inform the task id", chat)
+            else:
+                task_id = int(msg)
+                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+                try:
+                    task = query.one()
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message("_404_ Task {} not found x.x".format(task_id), chat)
+                    return
+
+                print(text)
+                if text == '':
+                    send_message(
+                        "_Canceled_ Hey, you must inform a description\nTry Again.", chat)
+                else:
+                    if len(text) > 1000:
+                        send_message("Hey, the description *must be* less of 1000 caracters.", chat)
+                    else:
+                        task.description = text
+                        send_message("*Task {}*:Update successful. ´XD´".format(task_id), chat)
+                db.session.commit()
+
         elif command == '/start':
             send_message("Welcome! Here is a list of things you can do.", chat)
             send_message(HELP, chat)
+
         elif command == '/help':
             send_message("Here is a list of things you can do.", chat)
             send_message(HELP, chat)
+
         else:
             send_message("I'm sorry dave. I'm afraid I can't do that.", chat)
 
