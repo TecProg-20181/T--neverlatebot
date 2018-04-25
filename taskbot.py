@@ -26,6 +26,8 @@ HELP = """
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
  /duedate ID DUEDATE{AAAA/MM/DD}
+ /setdescription ID DESCRIPTION
+ /taskdetail ID
  /help
 """
 
@@ -141,6 +143,7 @@ def handle_updates(updates):
                 task.name = text
                 db.session.commit()
                 send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
+      
         elif command == '/duplicate':
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
@@ -154,7 +157,7 @@ def handle_updates(updates):
                     return
 
                 dtask = Task(chat=task.chat, name=task.name, status=task.status, dependencies=task.dependencies,
-                             parents=task.parents, priority=task.priority, duedate=task.duedate)
+                             parents=task.parents, priority=task.priority, duedate=task.duedate, description=task.description)
                 db.session.add(dtask)
 
                 for t in task.dependencies.split(',')[:-1]:
@@ -244,31 +247,33 @@ def handle_updates(updates):
 
                 duedate = ' '
                 duedate = task.duedate
-
-                if duedate is None or '01/01/1900':
+                duedate = duedate.strftime('%d/%m/%Y')
+                if duedate == '01/01/1900':
                     duedate = ' '
-                else:
-                    duedate = duedate.strftime('%d/%m/%Y')
 
                 a += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
                 a += deps_text(task, chat)
 
             send_message(a, chat)
-            a = ''
 
+            priority = ' '
+            priority = task.priority
+            if priority == 'None':
+                priority = ' '
+            a = ''
             a += '\U0001F4DD _Status_\n'
             query = db.session.query(Task).filter_by(status='TODO', chat=chat).order_by(Task.id)
             a += '\n\U0001F195 *TODO*\n'
             for task in query.all():
-                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
             query = db.session.query(Task).filter_by(status='DOING', chat=chat).order_by(Task.id)
             a += '\n\U000023FA *DOING*\n'
             for task in query.all():
-                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
             query = db.session.query(Task).filter_by(status='DONE', chat=chat).order_by(Task.id)
             a += '\n\U00002611 *DONE*\n'
             for task in query.all():
-                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, task.priority)
+                a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
 
             send_message(a, chat)
 
@@ -285,8 +290,9 @@ def handle_updates(updates):
 
                 duedate = ' '
                 duedate = task.duedate
+                duedate = duedate.strftime('%d/%m/%Y')
 
-                if duedate is None or '01/01/1900':
+                if duedate == '01/01/1900':
                     duedate = ' '
                     aux += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
                     aux += deps_text(task, chat)
@@ -345,6 +351,7 @@ def handle_updates(updates):
 
                 db.session.commit()
                 send_message("Task {} dependencies up to date".format(task_id), chat)
+       
         elif command == '/priority':
             text = ''
             if msg != '':
@@ -413,6 +420,7 @@ def handle_updates(updates):
                 db.session.commit()
             print(msg)
             print(text)
+       
         elif command == '/setdescription':
             text = ''
             if msg != '':
@@ -442,6 +450,50 @@ def handle_updates(updates):
                         task.description = text
                         send_message("*Task {}*:Update successful. ´XD´".format(task_id), chat)
                 db.session.commit()
+
+        elif command == '/taskdetail':
+            from datetime import datetime
+            if msg != '':
+                if len(msg.split(' ', 1)) > 1:
+                    text = msg.split(' ', 1)[1]
+                msg = msg.split(' ', 1)[0]
+
+            if not msg.isdigit():
+                send_message("You must inform the task id", chat)
+            else:
+                task_id = int(msg)
+                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+                try:
+                    task = query.one()
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message(
+                        "_404_ Task {} not found x.x".format(task_id), chat)
+                    return
+
+                a = ''
+                a += '\U0001F4D1 Task Detail\n'
+                icon = '\U0001F195'
+                if task.status == 'DOING':
+                    icon = '\U000023FA'
+                elif task.status == 'DONE':
+                    icon = '\U00002611'
+
+                duedate = ' '
+                duedate = task.duedate
+                duedate = duedate.strftime('%d/%m/%Y')
+                if duedate == '01/01/1900':
+                    duedate = ' '
+
+                priority = ' '
+                priority = task.priority
+                if priority == 'None':
+                    priority = ' '
+
+                a += '[[{}]] {} {} \t`{}`\nData de entrega:\n>{}\nDescrição:\n{}\n'.format(
+                    task.id, icon, task.name, priority, duedate, task.description)
+                a += deps_text(task, chat)
+
+                send_message(a, chat)
 
         elif command == '/start':
             send_message("Welcome! Here is a list of things you can do.", chat)
