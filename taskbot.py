@@ -257,22 +257,28 @@ def handle_updates(updates):
             send_message(a, chat)
 
             priority = ' '
-            priority = task.priority
-            if priority == 'None':
-                priority = ' '
             a = ''
             a += '\U0001F4DD _Status_\n'
             query = db.session.query(Task).filter_by(status='TODO', chat=chat).order_by(Task.id)
             a += '\n\U0001F195 *TODO*\n'
             for task in query.all():
+                priority = task.priority
+                if priority == 'None':
+                    priority = ' '
                 a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
             query = db.session.query(Task).filter_by(status='DOING', chat=chat).order_by(Task.id)
             a += '\n\U000023FA *DOING*\n'
             for task in query.all():
+                priority = task.priority
+                if priority == 'None':
+                    priority = ' '
                 a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
             query = db.session.query(Task).filter_by(status='DONE', chat=chat).order_by(Task.id)
             a += '\n\U00002611 *DONE*\n'
             for task in query.all():
+                priority = task.priority
+                if priority == 'None':
+                    priority = ' '
                 a += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
 
             send_message(a, chat)
