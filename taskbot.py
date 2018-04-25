@@ -8,7 +8,7 @@ import urllib
 import sqlalchemy
 
 import db
-from db import Task
+from db import Task, Dependencies, Association
 from get_token import *
 
 TOKEN = get_token()
@@ -65,24 +65,26 @@ def get_last_update_id(updates):
 def deps_text(task, chat, preceed=''):
     text = ''
 
-    for i in range(len(task.dependencies.split(',')[:-1])):
+    i=1
+    dependencies_count = db.session.query(Association).filter_by(parents_id=task.id).count()
+    query = db.session.query(Association).filter_by(parents_id=task.id)
+    for row in query.all():
         line = preceed
-        query = db.session.query(Task).filter_by(id=int(task.dependencies.split(',')[:-1][i]), chat=chat)
-        dep = query.one()
+        dep = db.session.query(Task).get(row.id)
 
         icon = '\U0001F195'
         if dep.status == 'DOING':
             icon = '\U000023FA'
         elif dep.status == 'DONE':
             icon = '\U00002611'
-
-        if i + 1 == len(task.dependencies.split(',')[:-1]):
+        if i == dependencies_count:
             line += '└── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
             line += deps_text(dep, chat, preceed + '    ')
         else:
             line += '├── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
             line += deps_text(dep, chat, preceed + '│   ')
 
+        i+=1
         text += line
 
     return text
@@ -110,7 +112,7 @@ def handle_updates(updates):
         print(command, msg, chat)
 
         if command == '/new':
-            task = Task(chat=chat, name=msg, status='TODO', description='No description.', dependencies='None', parents='', priority='None', duedate='')
+            task = Task(chat=chat, name=msg, status='TODO', description='No description.', priority='None', duedate='')
             from datetime import datetime
             task.duedate = datetime.strptime(task.duedate, '')
             db.session.add(task)
@@ -143,7 +145,7 @@ def handle_updates(updates):
                 task.name = text
                 db.session.commit()
                 send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
-      
+
         elif command == '/duplicate':
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
@@ -156,16 +158,21 @@ def handle_updates(updates):
                     send_message("_404_ Task {} not found x.x".format(task_id), chat)
                     return
 
-                dtask = Task(chat=task.chat, name=task.name, status=task.status, dependencies=task.dependencies,
-                             parents=task.parents, priority=task.priority, duedate=task.duedate, description=task.description)
+                dtask = Task(chat=task.chat, name=task.name, status=task.status,
+                             priority=task.priority, duedate=task.duedate, description=task.description)
+
                 db.session.add(dtask)
-
-                for t in task.dependencies.split(',')[:-1]:
-                    qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
-                    t = qy.one()
-                    t.parents += '{},'.format(dtask.id)
-
                 db.session.commit()
+
+                query = db.session.query(Association).filter_by(parents_id=task_id)
+                q = query.one()
+                for q in query.all():
+                    dduplicate = Association(id=q.id , parents_id=dtask.id)
+                    print(type(dduplicate))
+                    print(dduplicate.parents_id)
+                    db.session.add(dduplicate)
+                    db.session.commit()
+
                 send_message("New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
 
         elif command == '/delete':
@@ -179,10 +186,15 @@ def handle_updates(updates):
                 except sqlalchemy.orm.exc.NoResultFound:
                     send_message("_404_ Task {} not found x.x".format(task_id), chat)
                     return
-                for t in task.dependencies.split(',')[:-1]:
-                    qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
-                    t = qy.one()
-                    t.parents = t.parents.replace('{},'.format(task.id), '')
+
+                query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
+                try:
+                    q2 = query_dependencies.one()
+                    db.session.delete(q2)
+
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message("No dependencies".format(task_id), chat)
+
                 db.session.delete(task)
                 db.session.commit()
                 send_message("Task [[{}]] deleted".format(task_id), chat)
@@ -237,7 +249,7 @@ def handle_updates(updates):
             a = ''
 
             a += '\U0001F4CB Task List\n'
-            query = db.session.query(Task).filter_by(parents='', chat=chat).order_by(Task.id)
+            query = db.session.query(Task).filter_by(chat=chat).order_by(Task.id)
             for task in query.all():
                 icon = '\U0001F195'
                 if task.status == 'DOING':
@@ -251,7 +263,7 @@ def handle_updates(updates):
                 if duedate == '01/01/1900':
                     duedate = ' '
 
-                a += '[[{}]] {} {}\n`{}`\n\n'.format(task.id, icon, task.name, duedate)
+                a += '\n[[{}]] {} {}\n`{}`'.format(task.id, icon, task.name, duedate)
                 a += deps_text(task, chat)
 
             send_message(a, chat)
@@ -286,7 +298,7 @@ def handle_updates(updates):
             a = ''
             aux = ''
             a += '\U0001F4C6 Task List by duedate\n'
-            query = db.session.query(Task).filter_by(parents='', chat=chat).order_by(Task.duedate)
+            query = db.session.query(Task).filter_by(name='', chat=chat).order_by(Task.duedate)
             for task in query.all():
                 icon = '\U0001F195'
                 if task.status == 'DOING':
@@ -329,13 +341,12 @@ def handle_updates(updates):
                     return
 
                 if text == '':
-                    for i in task.dependencies.split(',')[:-1]:
-                        i = int(i)
-                        q = db.session.query(Task).filter_by(id=i, chat=chat)
-                        t = q.one()
-                        t.parents = t.parents.replace('{},'.format(task.id), '')
+                    try:
+                        query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
+                        db.session.delete(query_dependencies)
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        send_message("No dependencies to delete from task {}.".format(task_id), chat)
 
-                    task.dependencies = ''
                     send_message("Dependencies removed from task {}".format(task_id), chat)
                 else:
                     for depid in text.split(' '):
@@ -344,20 +355,26 @@ def handle_updates(updates):
                         else:
                             depid = int(depid)
                             query = db.session.query(Task).filter_by(id=depid, chat=chat)
+
                             try:
                                 taskdep = query.one()
-                                taskdep.parents += str(task.id) + ','
+                                dependency = Association(id=taskdep.id, parents_id=task.id)
+
+                                try:
+                                    query_dependency = db.session.query(Association).filter_by(parents_id=taskdep.id)
+                                    q = query_dependency.one()
+                                    send_message("Tasks can't be co-dependents", chat)
+                                    return
+                                except:
+                                    db.session.add(dependency)
+
                             except sqlalchemy.orm.exc.NoResultFound:
                                 send_message("_404_ Task {} not found x.x".format(depid), chat)
                                 continue
 
-                            deplist = task.dependencies.split(',')
-                            if str(depid) not in deplist:
-                                task.dependencies += str(depid) + ','
-
                 db.session.commit()
                 send_message("Task {} dependencies up to date".format(task_id), chat)
-       
+
         elif command == '/priority':
             text = ''
             if msg != '':
@@ -414,7 +431,6 @@ def handle_updates(updates):
                 else:
                     text = text.split("/")
                     text.reverse()
-                    print(text)
                     if not (1 <= int(text[2]) <= 31 and 1 <= int(text[1]) <= 12 and 1970 <= int(text[0]) <= 2100):
                         send_message(
                             "The due date *must be* of the following format: DD/MM/YYYY (including '/')", chat)
@@ -424,9 +440,7 @@ def handle_updates(updates):
                         send_message(
                             "*Task {}* due date has due date *{}*".format(task_id, task.duedate), chat)
                 db.session.commit()
-            print(msg)
-            print(text)
-       
+
         elif command == '/setdescription':
             text = ''
             if msg != '':
@@ -445,7 +459,6 @@ def handle_updates(updates):
                     send_message("_404_ Task {} not found x.x".format(task_id), chat)
                     return
 
-                print(text)
                 if text == '':
                     send_message(
                         "_Canceled_ Hey, you must inform a description\nTry Again.", chat)
