@@ -164,3 +164,21 @@ def doing_task(chat, msg):
         task.status = 'DOING'
         db.session.commit()
         send_message("*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+
+def done_task(chat, msg):
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        task.status = 'DONE'
+        db.session.commit()
+        send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
