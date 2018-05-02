@@ -8,6 +8,7 @@ import urllib
 import sqlalchemy
 
 import db
+from handle_updates import *
 from db import Task, Association
 from get_token import get_token
 
@@ -114,7 +115,7 @@ def handle_updates(updates):
 
         if 'text' in message:
             command = message["text"].split(" ", 1)[0]
-            
+
             if len(message["text"].split(" ", 1)) > 1:
                 msg = message["text"].split(" ", 1)[1].strip()
 
@@ -125,13 +126,7 @@ def handle_updates(updates):
         print(command, msg, chat)
 
         if command == '/new':
-            from datetime import datetime
-            task = Task(chat=chat, name=msg, status='TODO', description='No description.',
-                        priority='None', duedate='')
-            task.duedate = datetime.strptime(task.duedate, '')
-            db.session.add(task)
-            db.session.commit()
-            send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
+            new_task(chat, msg)
 
         elif command == '/rename':
             text = ''
@@ -149,7 +144,7 @@ def handle_updates(updates):
 
                 try:
                     task = query.one()
- 
+
                 except sqlalchemy.orm.exc.NoResultFound:
                     send_message("_404_ Task {} not found x.x".format(task_id), chat)
                     return
