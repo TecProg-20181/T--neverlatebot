@@ -121,35 +121,7 @@ def handle_updates(updates):
             task_dependencies(chat, msg)
 
         elif command == '/priority':
-            msg, text = split_msg(msg)
-
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message("_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                if text == '':
-                    task.priority = ''
-                    send_message(
-                        "_Cleared_ all priorities from task {}".format(task_id), chat)
-
-                else:
-                    if text.lower() not in ['high', 'medium', 'low']:
-                        send_message("The priority *must be* one of the following: high, medium, low", chat)
-
-                    else:
-                        task.priority = text.lower()
-                        send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
-
-                db.session.commit()
+            task_priority(chat, msg)
 
         elif command == '/duedate':
             msg, text = split_msg(msg)
