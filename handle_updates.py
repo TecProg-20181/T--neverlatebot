@@ -18,17 +18,19 @@ def get_url(url):
 
 def get_json_from_url(url):
     content = get_url(url)
-    js = json.loads(content)
-    return js
+    json_file = json.loads(content)
+    return json_file
 
+# Get API updates.
 def get_updates(offset=None):
     url = URL + "getUpdates?timeout=100"
     if offset:
         url += "&offset={}".format(offset)
 
-    js = get_json_from_url(url)
-    return js
+    json_file = get_json_from_url(url)
+    return json_file
 
+# Sends the message to the user on the telegram.
 def send_message(text, chat_id, reply_markup=None):
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
@@ -44,17 +46,21 @@ def get_last_update_id(updates):
 
     return max(update_ids)
 
+# Split msg into id and options.
 def split_msg(msg):
     text = ''
-    if msg != '':
+    if msg:
         if len(msg.split(' ', 1)) > 1:
             text = msg.split(' ', 1)[1]
         msg = msg.split(' ', 1)[0]
+
     return msg, text
 
+# Get and format the view of dependencies.
 def deps_text(task, chat, preceed=''):
     text = ''
 
+    
     i = 1
     dependencies_count = db.session.query(Association).filter_by(parents_id=task.id).count()
     query = db.session.query(Association).filter_by(parents_id=task.id)
@@ -87,6 +93,7 @@ def deps_text(task, chat, preceed=''):
 
     return text
 
+# '/new ID'.
 def new_task(chat, msg):
 
     from datetime import datetime
@@ -99,6 +106,7 @@ def new_task(chat, msg):
 
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
+# '/rename ID NAME'.
 def rename_task(chat, msg):
     msg, text = split_msg(msg)
 
@@ -127,6 +135,7 @@ def rename_task(chat, msg):
         db.session.commit()
         send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
 
+# '/duplicate ID'.
 def duplicate_task(chat, msg):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
@@ -165,7 +174,7 @@ def duplicate_task(chat, msg):
 
         send_message("New task *TODO* [[{}]] {}".format(duplicated_task.id, duplicated_task.name), chat)
 
-
+# '/delete ID'.
 def delete_task(chat, msg):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
@@ -205,8 +214,8 @@ def delete_task(chat, msg):
         db.session.commit()
         send_message("Task [[{}]] deleted".format(task_id), chat)
 
+# '/todo ID'.
 def to_do_task(chat, msg):
-
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
 
@@ -224,8 +233,8 @@ def to_do_task(chat, msg):
         db.session.commit()
         send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
 
+# '/doing ID'.
 def doing_task(chat, msg):
-
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
 
@@ -243,6 +252,7 @@ def doing_task(chat, msg):
         db.session.commit()
         send_message("*DOING* task [[{}]] {}".format(task.id, task.name), chat)
 
+# '/done ID'.
 def done_task(chat, msg):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
@@ -261,8 +271,8 @@ def done_task(chat, msg):
         db.session.commit()
         send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
 
+# '/list'.
 def list_tasks(chat, msg):
-
     from datetime import datetime
 
     response = ''
@@ -349,8 +359,8 @@ def list_tasks(chat, msg):
     response += aux
     send_message(response, chat)
 
+# '/dependson ID ID...{Dependencies IDs}'.
 def task_dependencies(chat, msg):
-
     msg, text = split_msg(msg)
 
     if not msg.isdigit():
@@ -405,8 +415,8 @@ def task_dependencies(chat, msg):
         db.session.commit()
         send_message("Task {} dependencies up to date".format(task_id), chat)
 
+# '/priority ID PRIORITY{low, medium, high}'.
 def task_priority(chat, msg):
-
     msg, text = split_msg(msg)
 
     if not msg.isdigit():
@@ -436,9 +446,9 @@ def task_priority(chat, msg):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
 
         db.session.commit()
-        
-def set_due_date(chat, msg):
 
+# '/duedate ID DUEDATE{DD/MM/YYYY}'.
+def set_due_date(chat, msg):
     msg, text = split_msg(msg)
 
     if not msg.isdigit():
@@ -475,6 +485,7 @@ def set_due_date(chat, msg):
 
         db.session.commit()
 
+# '/setdescription ID DESCRIPTION'.
 def set_description(chat, msg):
     msg, text = split_msg(msg)
 
@@ -506,7 +517,8 @@ def set_description(chat, msg):
                 "*Task {}*:Update successful. ´XD´".format(task_id), chat)
 
     db.session.commit()
-    
+
+# '/taskdetail ID'.
 def task_detail(chat, msg):
     from datetime import datetime
 

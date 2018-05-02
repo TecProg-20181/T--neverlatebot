@@ -100,6 +100,7 @@ def handle_updates(updates):
 def main():
     last_update_id = None
 
+    # Search for update every half second.
     while True:
         print("Updates")
         updates = get_updates(last_update_id)
