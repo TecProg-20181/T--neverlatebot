@@ -1,10 +1,48 @@
 import sqlalchemy
-
+import json
+import requests
 import db
-from db import Task , Association
+import time
+import urllib
 
-# TODO(Lucas) Retirar o import abaixo quando a send_message estiver neste arquivo.
-from taskbot import send_message
+from db import Task ,Association
+from get_token import get_token
+
+TOKEN = get_token()
+URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+
+def get_url(url):
+    response = requests.get(url)
+    content = response.content.decode("utf8")
+    return content
+
+def get_json_from_url(url):
+    content = get_url(url)
+    js = json.loads(content)
+    return js
+
+def get_updates(offset=None):
+    url = URL + "getUpdates?timeout=100"
+    if offset:
+        url += "&offset={}".format(offset)
+
+    js = get_json_from_url(url)
+    return js
+
+def send_message(text, chat_id, reply_markup=None):
+    text = urllib.parse.quote_plus(text)
+    url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
+    if reply_markup:
+        url += "&reply_markup={}".format(reply_markup)
+
+    get_url(url)
+
+def get_last_update_id(updates):
+    update_ids = []
+    for update in updates["result"]:
+        update_ids.append(int(update["update_id"]))
+
+    return max(update_ids)
 
 def split_msg(msg):
     text = ''
@@ -111,14 +149,19 @@ def duplicate_task(chat, msg):
         db.session.add(duplicated_task)
         db.session.commit()
 
-        query = db.session.query(Association).filter_by(parents_id=task_id)
-        query_row = query.one()
-        for query_row in query.all():
-            duplicated_association = Association(id=query_row.id , parents_id=duplicated_task.id)
-            print(type(duplicated_association))
-            print(duplicated_association.parents_id)
-            db.session.add(duplicated_association)
-            db.session.commit()
+        try:
+            query = db.session.query(Association).filter_by(parents_id=task_id)
+            query_row = query.one()
+
+            for query_row in query.all():
+                duplicated_association = Association(id=query_row.id , parents_id=duplicated_task.id)
+                print(type(duplicated_association))
+                print(duplicated_association.parents_id)
+                db.session.add(duplicated_association)
+                db.session.commit()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            pass
 
         send_message("New task *TODO* [[{}]] {}".format(duplicated_task.id, duplicated_task.name), chat)
 

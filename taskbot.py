@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-
-import json
-import requests
-import time
-import urllib
-
-import sqlalchemy
-
-import db
 from handle_updates import *
-from db import Task, Association
-from get_token import get_token
-
-TOKEN = get_token()
-URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
  /new NOME
@@ -31,39 +17,6 @@ HELP = """
  /taskdetail ID
  /help
 """
-
-def get_url(url):
-    response = requests.get(url)
-    content = response.content.decode("utf8")
-    return content
-
-def get_json_from_url(url):
-    content = get_url(url)
-    js = json.loads(content)
-    return js
-
-def get_updates(offset=None):
-    url = URL + "getUpdates?timeout=100"
-    if offset:
-        url += "&offset={}".format(offset)
-
-    js = get_json_from_url(url)
-    return js
-
-def send_message(text, chat_id, reply_markup=None):
-    text = urllib.parse.quote_plus(text)
-    url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
-    if reply_markup:
-        url += "&reply_markup={}".format(reply_markup)
-
-    get_url(url)
-
-def get_last_update_id(updates):
-    update_ids = []
-    for update in updates["result"]:
-        update_ids.append(int(update["update_id"]))
-
-    return max(update_ids)
 
 def handle_updates(updates):
 
