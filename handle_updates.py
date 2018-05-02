@@ -4,6 +4,14 @@ from db import Task , Association
 # TODO(Lucas) Retirar o import abaixo quando a send_message estiver neste arquivo.
 from taskbot import send_message
 
+def split_msg(msg):
+    text = ''
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+    return msg, text
+
 def new_task(chat, msg):
 
     from datetime import datetime
@@ -17,11 +25,7 @@ def new_task(chat, msg):
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
 def rename_task(chat, msg):
-    text = ''
-    if msg != '':
-        if len(msg.split(' ', 1)) > 1:
-            text = msg.split(' ', 1)[1]
-        msg = msg.split(' ', 1)[0]
+    msg, text = split_msg(msg)
 
     if not msg.isdigit():
         send_message("You must inform the task id", chat)

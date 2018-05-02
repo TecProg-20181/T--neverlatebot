@@ -318,11 +318,7 @@ def handle_updates(updates):
             send_message(response, chat)
 
         elif command == '/dependson':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
+            msg, text = split_msg(msg)
 
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
@@ -377,11 +373,7 @@ def handle_updates(updates):
                 send_message("Task {} dependencies up to date".format(task_id), chat)
 
         elif command == '/priority':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
+            msg, text = split_msg(msg)
 
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
@@ -412,11 +404,7 @@ def handle_updates(updates):
                 db.session.commit()
 
         elif command == '/duedate':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
+            msg, text = split_msg(msg)
 
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
@@ -453,11 +441,7 @@ def handle_updates(updates):
                 db.session.commit()
 
         elif command == '/setdescription':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
+            msg, text = split_msg(msg)
 
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
