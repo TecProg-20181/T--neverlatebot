@@ -305,3 +305,59 @@ def list_tasks(chat, msg):
 
     response += aux
     send_message(response, chat)
+
+def task_dependencies(chat, msg):
+
+    msg, text = split_msg(msg)
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        if not text:
+            try:
+                query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
+                db.session.delete(query_dependencies)
+
+            except sqlalchemy.orm.exc.NoResultFound:
+                send_message("No dependencies to delete from task {}.".format(task_id), chat)
+
+            send_message("Dependencies removed from task {}".format(task_id), chat)
+
+        else:
+            for dependency_id in text.split(' '):
+                if not dependency_id.isdigit():
+                    send_message("All dependencies ids must be numeric, and not {}".format(dependency_id), chat)
+
+                else:
+                    dependency_id = int(dependency_id)
+                    query = db.session.query(Task).filter_by(id=dependency_id, chat=chat)
+
+                    try:
+                        dependent_task = query.one()
+                        dependency = Association(id=dependent_task.id, parents_id=task.id)
+
+                        try:
+                            query_dependency = db.session.query(Association).filter_by(parents_id=dependent_task.id)
+                            query_aux = query_dependency.one()
+                            send_message("Tasks can't be co-dependents", chat)
+                            return
+
+                        except:
+                            db.session.add(dependency)
+
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        send_message("_404_ Task {} not found x.x".format(dependency_id), chat)
+                        continue
+
+        db.session.commit()
+        send_message("Task {} dependencies up to date".format(task_id), chat)
