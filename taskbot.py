@@ -133,34 +133,7 @@ def handle_updates(updates):
             new_task(chat, msg)
 
         elif command == '/rename':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
-
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-
-                try:
-                    task = query.one()
-
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message("_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                if text == '':
-                    send_message("You want to modify task {}, but you didn't provide any new text".format(task_id), chat)
-                    return
-
-                old_text = task.name
-                task.name = text
-                db.session.commit()
-                send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
+            rename_task(chat, msg)
 
         elif command == '/duplicate':
             duplicate_task(chat, msg)
