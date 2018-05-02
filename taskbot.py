@@ -139,42 +139,7 @@ def handle_updates(updates):
             duplicate_task(chat, msg)
 
         elif command == '/delete':
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-
-                try:
-                    task = query.one()
-
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message("_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
-                for rows in query_dependencies.all():
-                    try:
-                        deleted_query = rows
-                        db.session.delete(deleted_query)
-
-                    except sqlalchemy.orm.exc.NoResultFound:
-                        send_message("No dependencies".format(task_id), chat)
-
-                query = db.session.query(Association).filter_by(id=task_id)
-
-                for rows in query.all():
-                    try:
-                        deleted_query = rows
-                        db.session.delete(deleted_query)
-
-                    except sqlalchemy.orm.exc.NoResultFound:
-                        send_message("No dependencies".format(task_id), chat)
-
-                db.session.delete(task)
-                db.session.commit()
-                send_message("Task [[{}]] deleted".format(task_id), chat)
+            delete_task(chat, msg)
 
         elif command == '/todo':
             if not msg.isdigit():
