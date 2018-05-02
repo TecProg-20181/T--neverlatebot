@@ -74,25 +74,29 @@ def deps_text(task, chat, preceed=''):
 
     for row in query.all():
         line = preceed
-        dependency = db.session.query(Task).get(row.id)
 
-        icon = '\U0001F195'
-        if dependency.status == 'DOING':
-            icon = '\U000023FA'
+        try:
+            dependency = db.session.query(Task).get(row.id)
+            icon = '\U0001F195'
+            if dependency.status == 'DOING':
+                icon = '\U000023FA'
 
-        elif dependency.status == 'DONE':
-            icon = '\U00002611'
+            elif dependency.status == 'DONE':
+                icon = '\U00002611'
 
-        if i == dependencies_count:
-            line += '└── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
-            line += deps_text(dependency, chat, preceed + '    ')
+            if i == dependencies_count:
+                line += '└── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
+                line += deps_text(dependency, chat, preceed + '    ')
 
-        else:
-            line += '├── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
-            line += deps_text(dependency, chat, preceed + '│   ')
+            else:
+                line += '├── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
+                line += deps_text(dependency, chat, preceed + '│   ')
 
-        i += 1
-        text += line
+            i += 1
+            text += line
+
+        except:
+            pass
 
     return text
 
@@ -207,12 +211,23 @@ def handle_updates(updates):
                     return
 
                 query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
-                try:
-                    deleted_query = query_dependencies.one()
-                    db.session.delete(deleted_query)
+                for rows in query_dependencies.all():
+                    try:
+                        deleted_query = rows
+                        db.session.delete(deleted_query)
 
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message("No dependencies".format(task_id), chat)
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        send_message("No dependencies".format(task_id), chat)
+
+                query = db.session.query(Association).filter_by(id=task_id)
+
+                for rows in query.all():
+                    try:
+                        deleted_query = rows
+                        db.session.delete(deleted_query)
+
+                    except sqlalchemy.orm.exc.NoResultFound:
+                        send_message("No dependencies".format(task_id), chat)
 
                 db.session.delete(task)
                 db.session.commit()
