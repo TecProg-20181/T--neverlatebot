@@ -436,3 +436,119 @@ def task_priority(chat, msg):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
 
         db.session.commit()
+        
+def set_due_date(chat, msg):
+
+    msg, text = split_msg(msg)
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message(
+                "_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+    if text == '':
+        task.duedate = ''
+        send_message(
+            "_Cleared_ due date from task {}".format(task_id), chat)
+
+    else:
+        text = text.split("/")
+        text.reverse()
+    if not (1 <= int(text[2]) <= 31 and 1 <= int(text[1]) <= 12 and 1970 <= int(text[0]) <= 2100):
+        send_message(
+            "The due date *must be* of the following format: DD/MM/YYYY (including '/')", chat)
+
+    else:
+        from datetime import datetime
+        task.duedate = datetime.strptime(" ".join(text), '%Y %m %d')
+        send_message(
+            "*Task {}* due date has due date *{}*".format(task_id, task.duedate), chat)
+
+        db.session.commit()
+
+def set_description(chat, msg):
+    msg, text = split_msg(msg)
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+    if text == '':
+        send_message(
+            "_Canceled_ Hey, you must inform a description\nTry Again.", chat)
+
+    else:
+        if len(text) > 1000:
+            send_message(
+                "Hey, the description *must be* less of 1000 caracters.", chat)
+
+        else:
+            task.description = text
+            send_message(
+                "*Task {}*:Update successful. ´XD´".format(task_id), chat)
+
+    db.session.commit()
+    
+def task_detail(chat, msg):
+    from datetime import datetime
+
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message(
+                "_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        response = ''
+        response += '\U0001F4D1 Task Detail\n'
+        icon = '\U0001F195'
+        if task.status == 'DOING':
+            icon = '\U000023FA'
+        elif task.status == 'DONE':
+            icon = '\U00002611'
+
+        duedate = ' '
+        duedate = task.duedate
+        duedate = duedate.strftime('%d/%m/%Y')
+        if duedate == '01/01/1900':
+            duedate = ' '
+
+        priority = ' '
+        priority = task.priority
+        if priority == 'None':
+            priority = ' '
+
+        response += '[[{}]] {} {} \t`{}`\nData de entrega:\n>{}\nDescrição:\n{}\n'.format(task.id, icon, task.name, priority, duedate, task.description)
+        response += deps_text(task, chat)
+
+        send_message(response, chat)
