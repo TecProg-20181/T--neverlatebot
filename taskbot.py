@@ -65,42 +65,6 @@ def get_last_update_id(updates):
 
     return max(update_ids)
 
-def deps_text(task, chat, preceed=''):
-    text = ''
-
-    i = 1
-    dependencies_count = db.session.query(Association).filter_by(parents_id=task.id).count()
-    query = db.session.query(Association).filter_by(parents_id=task.id)
-
-    for row in query.all():
-        line = preceed
-
-        try:
-            dependency = db.session.query(Task).get(row.id)
-            icon = '\U0001F195'
-            if dependency.status == 'DOING':
-                icon = '\U000023FA'
-
-            elif dependency.status == 'DONE':
-                icon = '\U00002611'
-
-            if i == dependencies_count:
-                line += '└── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
-                line += deps_text(dependency, chat, preceed + '    ')
-
-            else:
-                line += '├── [[{}]] {} {}\n'.format(dependency.id, icon, dependency.name)
-                line += deps_text(dependency, chat, preceed + '│   ')
-
-            i += 1
-            text += line
-
-        except:
-            pass
-
-    return text
-
-
 def handle_updates(updates):
 
     for update in updates["result"]:
@@ -151,91 +115,7 @@ def handle_updates(updates):
             done_task(chat, msg)
 
         elif command == '/list':
-            from datetime import datetime
-
-            response = ''
-            response += '\U0001F4CB Task List\n'
-            query = db.session.query(Task).filter_by(chat=chat).order_by(Task.id)
-            for task in query.all():
-                icon = '\U0001F195'
-                if task.status == 'DOING':
-                    icon = '\U000023FA'
-
-                elif task.status == 'DONE':
-                    icon = '\U00002611'
-
-                duedate = ' '
-                duedate = task.duedate
-                duedate = duedate.strftime('%d/%m/%Y')
-                if duedate == '01/01/1900':
-                    duedate = ' '
-
-                response += '\n[[{}]] {} {}\n`{}`'.format(task.id, icon, task.name, duedate)
-                response += deps_text(task, chat)
-
-            send_message(response, chat)
-
-            priority = ' '
-            response = ''
-            response += '\U0001F4DD _Status_\n'
-            query = db.session.query(Task).filter_by(status='TODO', chat=chat).order_by(Task.id)
-            response += '\n\U0001F195 *TODO*\n'
-            for task in query.all():
-                priority = task.priority
-                if priority == 'None':
-                    priority = ' '
-
-                response += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
-
-            query = db.session.query(Task).filter_by(status='DOING', chat=chat).order_by(Task.id)
-            response += '\n\U000023FA *DOING*\n'
-            for task in query.all():
-                priority = task.priority
-                if priority == 'None':
-                    priority = ' '
-
-                response += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
-
-            query = db.session.query(Task).filter_by(status='DONE', chat=chat).order_by(Task.id)
-            response += '\n\U00002611 *DONE*\n'
-            for task in query.all():
-                priority = task.priority
-                if priority == 'None':
-                    priority = ' '
-
-                response += '[[{}]] {}  `{}`\n'.format(task.id, task.name, priority)
-
-            send_message(response, chat)
-
-            response = ''
-            aux = ''
-            response += '\U0001F4C6 Task List by duedate\n\n'
-            query = db.session.query(Task).filter_by(chat=chat).order_by(Task.duedate)
-            for task in query.all():
-                icon = '\U0001F195'
-                if task.status == 'DOING':
-                    icon = '\U000023FA'
-
-                elif task.status == 'DONE':
-                    icon = '\U00002611'
-
-                duedate = ' '
-                duedate = task.duedate
-                duedate = duedate.strftime('%d/%m/%Y')
-
-                if duedate == '01/01/1900':
-                    duedate = ' '
-                    aux += '[[{}]] {} {} `{}`\n'.format(task.id, icon, task.name, duedate)
-                    aux += deps_text(task, chat)
-                    aux += '\n'
-
-                else:
-                    response += '[[{}]] {} {} `{}`\n'.format(task.id, icon, task.name, duedate)
-                    response += deps_text(task, chat)
-                    response += '\n'
-
-            response += aux
-            send_message(response, chat)
+            list_tasks(chat, msg)
 
         elif command == '/dependson':
             msg, text = split_msg(msg)
