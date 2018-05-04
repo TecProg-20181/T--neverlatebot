@@ -3,9 +3,9 @@ from handle_updates import *
 
 HELP = """
  /new NOME
- /todo ID
- /doing ID
- /done ID
+ /todo ID ID...
+ /doing ID ID...
+ /done ID ID...
  /delete ID
  /list
  /rename ID NOME
