@@ -3,9 +3,9 @@ from handle_updates import *
 
 HELP = """
  /new NOME
- /todo ID
- /doing ID
- /done ID
+ /todo ID ID...
+ /doing ID ID...
+ /done ID ID...
  /delete ID
  /list
  /rename ID NOME
@@ -100,6 +100,7 @@ def handle_updates(updates):
 def main():
     last_update_id = None
 
+    # Search for update every half second.
     while True:
         print("Updates")
         updates = get_updates(last_update_id)
