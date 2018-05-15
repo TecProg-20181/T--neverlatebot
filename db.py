@@ -12,20 +12,35 @@ session = Session()
 
 Base = declarative_base()
 
-class Association(Base):
-    __tablename__ = 'association'
-    parents_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-    id = Column(Integer, ForeignKey('dependencies.id'), primary_key=True)
+class AssociationTD(Base):
+    __tablename__ = 'associationTD'
+    association_id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer)
+    parents_id = Column(Integer, ForeignKey('tasks.id'))
+    id = Column(Integer, ForeignKey('dependencies.id'))
     dependencies = relationship("Dependencies")
+
+class AssociationUT(Base):
+    __tablename__ = 'associationUT'
+    chat_id = Column(Integer, ForeignKey('users.chat_id'), primary_key=True)
+    task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
+    tasks = relationship("Task")
+
+
+class User(Base):
+    __tablename__ = 'users'
+    chat_id = Column(Integer, primary_key=True)
+    tasks = relationship("AssociationUT")
 
 class Task(Base):
     __tablename__ = 'tasks'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer)
+    task_id = Column(Integer, primary_key=True)
     chat = Column(Integer)
     name = Column(String(50))
     status = Column(String(10))
     description = Column(String(500))
-    dependencies = relationship("Association")
+    dependencies = relationship("AssociationTD")
     priority = Column(String(10))
     duedate = Column(Date)
 

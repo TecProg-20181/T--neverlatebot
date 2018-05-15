@@ -86,6 +86,7 @@ def handle_updates(updates):
             task_detail(chat, msg)
 
         elif command == '/start':
+            start_chat(chat)
             send_message("Welcome! Here is a list of things you can do.", chat)
             send_message(HELP, chat)
 
