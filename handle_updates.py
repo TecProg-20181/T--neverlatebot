@@ -5,21 +5,25 @@ import db
 import time
 import urllib
 
-from db import Task ,Association
+from db import User, Task, AssociationTD, AssociationUT
 from get_token import get_token
+
 
 TOKEN = get_token()
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+
 
 def get_url(url):
     response = requests.get(url)
     content = response.content.decode("utf8")
     return content
 
+
 def get_json_from_url(url):
     content = get_url(url)
     json_file = json.loads(content)
     return json_file
+
 
 # Get API updates.
 def get_updates(offset=None):
@@ -30,6 +34,7 @@ def get_updates(offset=None):
     json_file = get_json_from_url(url)
     return json_file
 
+
 # Sends the message to the user on the telegram.
 def send_message(text, chat_id, reply_markup=None):
     text = urllib.parse.quote_plus(text)
@@ -39,12 +44,14 @@ def send_message(text, chat_id, reply_markup=None):
 
     get_url(url)
 
+
 def get_last_update_id(updates):
     update_ids = []
     for update in updates["result"]:
         update_ids.append(int(update["update_id"]))
 
     return max(update_ids)
+
 
 # Split msg into id and options.
 def split_msg(msg):
@@ -56,20 +63,21 @@ def split_msg(msg):
 
     return msg, text
 
+
 # Get and format the view of dependencies.
 def deps_text(task, chat, preceed=''):
     text = ''
 
-    
     i = 1
-    dependencies_count = db.session.query(Association).filter_by(parents_id=task.id).count()
-    query = db.session.query(Association).filter_by(parents_id=task.id)
+    dependencies_count = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task.id).count()
+    query = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task.id)
 
     for row in query.all():
         line = preceed
 
         try:
-            dependency = db.session.query(Task).get(row.id)
+            dependency = db.session.query(Task).filter_by(id=row.id, chat=chat)
+            dependency = dependency.one()
             icon = '\U0001F195'
             if dependency.status == 'DOING':
                 icon = '\U000023FA'
@@ -93,18 +101,34 @@ def deps_text(task, chat, preceed=''):
 
     return text
 
+
+# '/start'.
+def start_chat(chat):
+    new_chat = User(chat_id=chat)
+    db.session.add(new_chat)
+    db.session.commit()
+
+
 # '/new ID'.
 def new_task(chat, msg):
-
     from datetime import datetime
-    task = Task(chat=chat, name=msg, status='TODO', description='No description.',
+
+    newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
+    chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
+    
+    db.session.add(chat_task)
+    db.session.commit()
+
+    task = Task(id=newtask_id, chat=chat, name=msg, status='TODO', description='No description.',
                 priority='None', duedate='')
 
     task.duedate = datetime.strptime(task.duedate, '')
+
     db.session.add(task)
     db.session.commit()
 
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
+
 
 # '/rename ID NAME'.
 def rename_task(chat, msg):
@@ -135,6 +159,7 @@ def rename_task(chat, msg):
         db.session.commit()
         send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
 
+
 # '/duplicate ID'.
 def duplicate_task(chat, msg):
     if not msg.isdigit():
@@ -151,7 +176,13 @@ def duplicate_task(chat, msg):
             send_message("_404_ Task {} not found x.x".format(task_id), chat)
             return
 
-        duplicated_task = Task(chat=task.chat, name=task.name, status=task.status,
+        newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
+        chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
+        
+        db.session.add(chat_task)
+        db.session.commit()
+
+        duplicated_task = Task(id=newtask_id, chat=task.chat, name=task.name, status=task.status,
                      priority=task.priority, duedate=task.duedate,
                      description=task.description)
 
@@ -159,11 +190,11 @@ def duplicate_task(chat, msg):
         db.session.commit()
 
         try:
-            query = db.session.query(Association).filter_by(parents_id=task_id)
+            query = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
             query_row = query.one()
 
             for query_row in query.all():
-                duplicated_association = Association(id=query_row.id , parents_id=duplicated_task.id)
+                duplicated_association = AssociationTD(chat_id=chat, id=query_row.id , parents_id=duplicated_task.id)
                 print(type(duplicated_association))
                 print(duplicated_association.parents_id)
                 db.session.add(duplicated_association)
@@ -173,6 +204,7 @@ def duplicate_task(chat, msg):
             pass
 
         send_message("New task *TODO* [[{}]] {}".format(duplicated_task.id, duplicated_task.name), chat)
+
 
 # '/delete ID'.
 def delete_task(chat, msg):
@@ -191,7 +223,7 @@ def delete_task(chat, msg):
             return
 
         query_dependencies = db.session.query(
-            Association).filter_by(parents_id=task_id)
+            AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
         for rows in query_dependencies.all():
             try:
                 deleted_query = rows
@@ -200,7 +232,7 @@ def delete_task(chat, msg):
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("No dependencies".format(task_id), chat)
 
-        query = db.session.query(Association).filter_by(id=task_id)
+        query = db.session.query(AssociationTD).filter_by(chat_id=chat, id=task_id)
 
         for rows in query.all():
             try:
@@ -210,9 +242,14 @@ def delete_task(chat, msg):
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("No dependencies".format(task_id), chat)
 
+        query = db.session.query(AssociationUT).filter_by(chat_id=chat, task_id=task_id)
+        query = query.one()
+        db.session.delete(query)
+
         db.session.delete(task)
         db.session.commit()
         send_message("Task [[{}]] deleted".format(task_id), chat)
+
 
 # '/todo ID'.
 def to_do_task(chat, msg):
@@ -235,6 +272,7 @@ def to_do_task(chat, msg):
         db.session.commit()
         send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
 
+
 # '/doing ID'.
 def doing_task(chat, msg):
     for task_id in msg.split(' '):
@@ -256,6 +294,7 @@ def doing_task(chat, msg):
         db.session.commit()
         send_message("*DOING* task [[{}]] {}".format(task.id, task.name), chat)
 
+
 # '/done ID'.
 def done_task(chat, msg):
     for task_id in msg.split(' '):
@@ -276,6 +315,7 @@ def done_task(chat, msg):
                 
         db.session.commit()
         send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
+
 
 # '/list'.
 def list_tasks(chat, msg):
@@ -365,6 +405,7 @@ def list_tasks(chat, msg):
     response += aux
     send_message(response, chat)
 
+
 # '/dependson ID ID...{Dependencies IDs}'.
 def task_dependencies(chat, msg):
     msg, text = split_msg(msg)
@@ -384,11 +425,16 @@ def task_dependencies(chat, msg):
 
         if not text:
             try:
-                query_dependencies = db.session.query(Association).filter_by(parents_id=task_id)
-                db.session.delete(query_dependencies)
+                query_dependencies = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
 
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("No dependencies to delete from task {}.".format(task_id), chat)
+
+            try:
+                for dependency in query_dependencies.all():
+                    db.session.delete(dependency)
+            except:
+                print("ERROR")
 
             send_message("Dependencies removed from task {}".format(task_id), chat)
 
@@ -403,10 +449,10 @@ def task_dependencies(chat, msg):
 
                     try:
                         dependent_task = query.one()
-                        dependency = Association(id=dependent_task.id, parents_id=task.id)
+                        dependency = AssociationTD(chat_id=chat, id=dependent_task.id, parents_id=task.id)
 
                         try:
-                            query_dependency = db.session.query(Association).filter_by(parents_id=dependent_task.id)
+                            query_dependency = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=dependent_task.id)
                             query_aux = query_dependency.one()
                             send_message("Tasks can't be co-dependents", chat)
                             return
@@ -420,6 +466,7 @@ def task_dependencies(chat, msg):
 
         db.session.commit()
         send_message("Task {} dependencies up to date".format(task_id), chat)
+
 
 # '/priority ID PRIORITY{low, medium, high}'.
 def task_priority(chat, msg):
@@ -452,6 +499,7 @@ def task_priority(chat, msg):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
 
         db.session.commit()
+
 
 # '/duedate ID DUEDATE{DD/MM/YYYY}'.
 def set_due_date(chat, msg):
@@ -491,6 +539,7 @@ def set_due_date(chat, msg):
 
         db.session.commit()
 
+
 # '/setdescription ID DESCRIPTION'.
 def set_description(chat, msg):
     msg, text = split_msg(msg)
@@ -523,6 +572,7 @@ def set_description(chat, msg):
                 "*Task {}*:Update successful. ´XD´".format(task_id), chat)
 
     db.session.commit()
+
 
 # '/taskdetail ID'.
 def task_detail(chat, msg):
