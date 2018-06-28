@@ -110,25 +110,26 @@ def start_chat(chat):
     db.session.commit()
 
 
-# '/new ID'.
+# '/new ID,ID,ID...'.
 def new_task(chat, msg):
     from datetime import datetime
+    
+    for task_name in msg.split(','):
+        newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
+        chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
 
-    newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
-    chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
+        db.session.add(chat_task)
+        db.session.commit()
 
-    db.session.add(chat_task)
-    db.session.commit()
+        task = Task(id=newtask_id, chat=chat, name=task_name, status='TODO', description='No description.',
+                    priority='None', duedate='')
 
-    task = Task(id=newtask_id, chat=chat, name=msg, status='TODO', description='No description.',
-                priority='None', duedate='')
+        task.duedate = datetime.strptime(task.duedate, '')
 
-    task.duedate = datetime.strptime(task.duedate, '')
+        db.session.add(task)
+        db.session.commit()
 
-    db.session.add(task)
-    db.session.commit()
-
-    send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
+        send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
 
 # '/rename ID NAME'.
