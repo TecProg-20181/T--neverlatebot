@@ -163,93 +163,95 @@ def rename_task(chat, msg):
 
 # '/duplicate ID'.
 def duplicate_task(chat, msg):
-    if not msg.isdigit():
-        send_message("You must inform the task id", chat)
+    for task_id in msg.split(' '):
+        if not task_id.isdigit():
+            send_message("You must inform the task id", chat)
 
-    else:
-        task_id = int(msg)
-        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        else:
+            task_id = int(task_id)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
 
-        try:
-            task = query.one()
+            try:
+                task = query.one()
 
-        except sqlalchemy.orm.exc.NoResultFound:
-            send_message("_404_ Task {} not found x.x".format(task_id), chat)
-            return
+            except sqlalchemy.orm.exc.NoResultFound:
+                send_message("_404_ Task {} not found x.x".format(task_id), chat)
+                return
 
-        newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
-        chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
+            newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
+            chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
 
-        db.session.add(chat_task)
-        db.session.commit()
+            db.session.add(chat_task)
+            db.session.commit()
 
-        duplicated_task = Task(id=newtask_id, chat=task.chat, name=task.name, status=task.status,
-                     priority=task.priority, duedate=task.duedate,
-                     description=task.description)
+            duplicated_task = Task(id=newtask_id, chat=task.chat, name=task.name, status=task.status,
+                         priority=task.priority, duedate=task.duedate,
+                         description=task.description)
 
-        db.session.add(duplicated_task)
-        db.session.commit()
+            db.session.add(duplicated_task)
+            db.session.commit()
 
-        try:
-            query = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
-            query_row = query.one()
+            try:
+                query = db.session.query(AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
+                query_row = query.one()
 
-            for query_row in query.all():
-                duplicated_association = AssociationTD(chat_id=chat, id=query_row.id , parents_id=duplicated_task.id)
-                print(type(duplicated_association))
-                print(duplicated_association.parents_id)
-                db.session.add(duplicated_association)
-                db.session.commit()
+                for query_row in query.all():
+                    duplicated_association = AssociationTD(chat_id=chat, id=query_row.id , parents_id=duplicated_task.id)
+                    print(type(duplicated_association))
+                    print(duplicated_association.parents_id)
+                    db.session.add(duplicated_association)
+                    db.session.commit()
 
-        except sqlalchemy.orm.exc.NoResultFound:
-            pass
+            except sqlalchemy.orm.exc.NoResultFound:
+                pass
 
-        send_message("New task *TODO* [[{}]] {}".format(duplicated_task.id, duplicated_task.name), chat)
+            send_message("New task *TODO* [[{}]] {}".format(duplicated_task.id, duplicated_task.name), chat)
 
 
 # '/delete ID'.
 def delete_task(chat, msg):
-    if not msg.isdigit():
-        send_message("You must inform the task id", chat)
+    for task_id in msg.split(' '):
+        if not task_id.isdigit():
+            send_message("You must inform the task id", chat)
 
-    else:
-        task_id = int(msg)
-        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        else:
+            task_id = int(task_id)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
 
-        try:
-            task = query.one()
-
-        except sqlalchemy.orm.exc.NoResultFound:
-            send_message("_404_ Task {} not found x.x".format(task_id), chat)
-            return
-
-        query_dependencies = db.session.query(
-            AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
-        for rows in query_dependencies.all():
             try:
-                deleted_query = rows
-                db.session.delete(deleted_query)
+                task = query.one()
 
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message("No dependencies".format(task_id), chat)
+                send_message("_404_ Task {} not found x.x".format(task_id), chat)
+                return
 
-        query = db.session.query(AssociationTD).filter_by(chat_id=chat, id=task_id)
+            query_dependencies = db.session.query(
+                AssociationTD).filter_by(chat_id=chat, parents_id=task_id)
+            for rows in query_dependencies.all():
+                try:
+                    deleted_query = rows
+                    db.session.delete(deleted_query)
 
-        for rows in query.all():
-            try:
-                deleted_query = rows
-                db.session.delete(deleted_query)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message("No dependencies".format(task_id), chat)
 
-            except sqlalchemy.orm.exc.NoResultFound:
-                send_message("No dependencies".format(task_id), chat)
+            query = db.session.query(AssociationTD).filter_by(chat_id=chat, id=task_id)
 
-        query = db.session.query(AssociationUT).filter_by(chat_id=chat, task_id=task_id)
-        query = query.one()
-        db.session.delete(query)
+            for rows in query.all():
+                try:
+                    deleted_query = rows
+                    db.session.delete(deleted_query)
 
-        db.session.delete(task)
-        db.session.commit()
-        send_message("Task [[{}]] deleted".format(task_id), chat)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message("No dependencies".format(task_id), chat)
+
+            query = db.session.query(AssociationUT).filter_by(chat_id=chat, task_id=task_id)
+            query = query.one()
+            db.session.delete(query)
+
+            db.session.delete(task)
+            db.session.commit()
+            send_message("Task [[{}]] deleted".format(task_id), chat)
 
 
 # '/todo ID'.
@@ -578,46 +580,47 @@ def set_description(chat, msg):
 # '/taskdetail ID'.
 def task_detail(chat, msg):
     from datetime import datetime
+    
+    for task_id in msg.split(' '):
+        if task_id != '':
+            if len(task_id.split(' ', 1)) > 1:
+                text = task_id.split(' ', 1)[1]
+            task_id = task_id.split(' ', 1)[0]
 
-    if msg != '':
-        if len(msg.split(' ', 1)) > 1:
-            text = msg.split(' ', 1)[1]
-        msg = msg.split(' ', 1)[0]
+        if not task_id.isdigit():
+            send_message("You must inform the task id", chat)
 
-    if not msg.isdigit():
-        send_message("You must inform the task id", chat)
+        else:
+            task_id = int(task_id)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+            try:
+                task = query.one()
 
-    else:
-        task_id = int(msg)
-        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-        try:
-            task = query.one()
+            except sqlalchemy.orm.exc.NoResultFound:
+                send_message(
+                    "_404_ Task {} not found x.x".format(task_id), chat)
+                return
 
-        except sqlalchemy.orm.exc.NoResultFound:
-            send_message(
-                "_404_ Task {} not found x.x".format(task_id), chat)
-            return
+            response = ''
+            response += '\U0001F4D1 Task Detail\n'
+            icon = '\U0001F195'
+            if task.status == 'DOING':
+                icon = '\U000023FA'
+            elif task.status == 'DONE':
+                icon = '\U00002611'
 
-        response = ''
-        response += '\U0001F4D1 Task Detail\n'
-        icon = '\U0001F195'
-        if task.status == 'DOING':
-            icon = '\U000023FA'
-        elif task.status == 'DONE':
-            icon = '\U00002611'
-
-        duedate = ' '
-        duedate = task.duedate
-        duedate = duedate.strftime('%d/%m/%Y')
-        if duedate == '01/01/1900':
             duedate = ' '
+            duedate = task.duedate
+            duedate = duedate.strftime('%d/%m/%Y')
+            if duedate == '01/01/1900':
+                duedate = ' '
 
-        priority = ' '
-        priority = task.priority
-        if priority == 'None':
             priority = ' '
+            priority = task.priority
+            if priority == 'None':
+                priority = ' '
 
-        response += '[[{}]] {} {} \t`{}`\nData de entrega:\n>{}\nDescrição:\n{}\n'.format(task.id, icon, task.name, priority, duedate, task.description)
-        response += deps_text(task, chat)
+            response += '[[{}]] {} {} \t`{}`\nData de entrega:\n>{}\nDescrição:\n{}\n'.format(task.id, icon, task.name, priority, duedate, task.description)
+            response += deps_text(task, chat)
 
-        send_message(response, chat)
+            send_message(response, chat)
