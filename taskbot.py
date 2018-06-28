@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from handle_updates import *
+from git import *
 
 HELP = """
  /new NOME
@@ -78,7 +79,7 @@ def handle_updates(updates):
 
         elif command == '/duedate':
             set_due_date(chat, msg)
-            
+
         elif command == '/setdescription':
             set_description(chat, msg)
 
@@ -93,6 +94,14 @@ def handle_updates(updates):
         elif command == '/help':
             send_message("Here is a list of things you can do.", chat)
             send_message(HELP, chat)
+
+        elif command == '/authorize_git':
+
+            send_message("1-Please, go to the following link in a web browser such as chrome or firefox:[https://github.com/login/oauth/authorize?client_id=442951c7a24c1bba8e4e&scope=repo]\n\n2-After you have authorized the application, copy the code from the url you were redirected to.\n\nExample of url:https://telegram.me/Neverlatebot?code=XXXcodeXXX, copy only XXXcodeXXX.\n\n3-Send your code for us as a command: /code XXXcodeXXX\n\n", chat)
+
+        elif command == '/code':
+            token_acsses = connectAccount(msg, chat)
+            login(token_acsses)
 
         else:
             send_message("I'm sorry dave. I'm afraid I can't do that.", chat)

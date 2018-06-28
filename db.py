@@ -31,6 +31,7 @@ class User(Base):
     __tablename__ = 'users'
     chat_id = Column(Integer, primary_key=True)
     tasks = relationship("AssociationUT")
+    github_access_token = Column(String(200))
 
 class Task(Base):
     __tablename__ = 'tasks'

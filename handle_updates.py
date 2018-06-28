@@ -7,6 +7,7 @@ import urllib
 
 from db import User, Task, AssociationTD, AssociationUT
 from get_token import get_token
+from git import*
 
 
 TOKEN = get_token()
@@ -115,7 +116,7 @@ def new_task(chat, msg):
 
     newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
     chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
-    
+
     db.session.add(chat_task)
     db.session.commit()
 
@@ -178,7 +179,7 @@ def duplicate_task(chat, msg):
 
         newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
         chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
-        
+
         db.session.add(chat_task)
         db.session.commit()
 
@@ -256,19 +257,19 @@ def to_do_task(chat, msg):
     for task_id in msg.split(' '):
         if not task_id.isdigit():
             send_message("All tasks IDs must be numeric, and not {}".format(task_id), chat)
-            
+
         else:
             task_id = int(task_id)
             query = db.session.query(Task).filter_by(id=task_id, chat=chat)
             try:
                 task = query.one()
-                
+
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("_404_ Task {} not found x.x".format(task_id), chat)
                 continue
-                
+
         task.status = 'TODO'
-                
+
         db.session.commit()
         send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
 
@@ -278,19 +279,19 @@ def doing_task(chat, msg):
     for task_id in msg.split(' '):
         if not task_id.isdigit():
             send_message("All tasks IDs must be numeric, and not {}".format(task_id), chat)
-            
+
         else:
             task_id = int(task_id)
             query = db.session.query(Task).filter_by(id=task_id, chat=chat)
             try:
                 task = query.one()
-                
+
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("_404_ Task {} not found x.x".format(task_id), chat)
                 continue
-                
+
         task.status = 'DOING'
-                
+
         db.session.commit()
         send_message("*DOING* task [[{}]] {}".format(task.id, task.name), chat)
 
@@ -300,19 +301,19 @@ def done_task(chat, msg):
     for task_id in msg.split(' '):
         if not task_id.isdigit():
             send_message("All tasks IDs must be numeric, and not {}".format(task_id), chat)
-            
+
         else:
             task_id = int(task_id)
             query = db.session.query(Task).filter_by(id=task_id, chat=chat)
             try:
                 task = query.one()
-                
+
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("_404_ Task {} not found x.x".format(task_id), chat)
                 continue
-                
+
         task.status = 'DONE'
-                
+
         db.session.commit()
         send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
 
