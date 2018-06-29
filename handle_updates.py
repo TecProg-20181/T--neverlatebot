@@ -7,7 +7,6 @@ import urllib
 
 from db import User, Task, AssociationTD, AssociationUT
 from get_token import get_token
-from git import*
 
 
 TOKEN = get_token()
@@ -105,15 +104,19 @@ def deps_text(task, chat, preceed=''):
 
 # '/start'.
 def start_chat(chat):
-    new_chat = User(chat_id=chat)
-    db.session.add(new_chat)
-    db.session.commit()
+    try:
+        query = db.session.query(User).filter_by(chat_id=chat)
+        user = query.one()
+    except:
+        new_chat = User(chat_id=chat)
+        db.session.add(new_chat)
+        db.session.commit()
 
 
 # '/new ID,ID,ID...'.
 def new_task(chat, msg):
     from datetime import datetime
-    
+
     for task_name in msg.split(','):
         newtask_id = db.session.query(AssociationUT).filter_by(chat_id=chat).count()+1
         chat_task = AssociationUT(chat_id=chat, task_id=newtask_id)
@@ -581,7 +584,7 @@ def set_description(chat, msg):
 # '/taskdetail ID'.
 def task_detail(chat, msg):
     from datetime import datetime
-    
+
     for task_id in msg.split(' '):
         if task_id != '':
             if len(task_id.split(' ', 1)) > 1:

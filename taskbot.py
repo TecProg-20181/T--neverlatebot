@@ -2,8 +2,9 @@
 from handle_updates import *
 from git import *
 
-HELP = """ 
- /new NOME1,NOME2,NOME3...
+HELP = """
+ /help
+ /new name1,name2,name3...
  /todo ID ID...
  /doing ID ID...
  /done ID ID...
@@ -16,7 +17,11 @@ HELP = """
  /duedate ID DUEDATE{DD/MM/YYYY}
  /setdescription ID DESCRIPTION
  /taskdetail ID ID...
- /help
+ /authorizegit
+ /code XXXXXXXXXXX
+ /listrepositories
+ /createissue NAME_OF_REPOSITORIE ID
+
 """
 
 def handle_updates(updates):
@@ -45,6 +50,7 @@ def handle_updates(updates):
             command = '/start'
 
         chat = message["chat"]["id"]
+        start_chat(chat)
         print(command, msg, chat)
 
         if command == '/new':
@@ -95,13 +101,23 @@ def handle_updates(updates):
             send_message("Here is a list of things you can do.", chat)
             send_message(HELP, chat)
 
-        elif command == '/authorize_git':
+        elif command == '/createissue':
+            GitApiHandlher.create_issue(msg, chat)
 
-            send_message("1-Please, go to the following link in a web browser such as chrome or firefox:[https://github.com/login/oauth/authorize?client_id=442951c7a24c1bba8e4e&scope=repo]\n\n2-After you have authorized the application, copy the code from the url you were redirected to.\n\nExample of url:https://telegram.me/Neverlatebot?code=XXXcodeXXX, copy only XXXcodeXXX.\n\n3-Send your code for us as a command: /code XXXcodeXXX\n\n", chat)
+        elif command == '/authorizegit':
+            GitApiHandlher.authorize_git(chat)
 
         elif command == '/code':
-            token_acsses = connectAccount(msg, chat)
-            login(token_acsses)
+            GitApiHandlher.get_token_accsses(msg, chat)
+
+        elif command == '/listrepositories':
+            query = db.session.query(User).filter_by(chat_id=chat)
+            user = query.one()
+
+            if user.github_access_token is None:
+                send_message("You have to auhtorize the application first, please use the command: '/authorize_git' and follow the instructions.", chat)
+            else:
+                GitApiHandlher.list_repositories(user.github_access_token, chat)
 
         else:
             send_message("I'm sorry dave. I'm afraid I can't do that.", chat)
