@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 from handle_updates import *
+from git import *
 
 HELP = """
- /new NOME
+ /help
+ /new name1,name2,name3...
  /todo ID ID...
  /doing ID ID...
  /done ID ID...
- /delete ID
+ /delete ID ID...
  /list
  /rename ID NOME
  /dependson ID ID...
- /duplicate ID
+ /duplicate ID ID...
  /priority ID PRIORITY{low, medium, high}
  /duedate ID DUEDATE{DD/MM/YYYY}
  /setdescription ID DESCRIPTION
- /taskdetail ID
- /help
+ /taskdetail ID ID...
+ /authorizegit
+ /code XXXXXXXXXXX
+ /listrepositories
+ /createissue NAME_OF_REPOSITORIE ID
+
 """
 
 def handle_updates(updates):
@@ -44,6 +50,7 @@ def handle_updates(updates):
             command = '/start'
 
         chat = message["chat"]["id"]
+        start_chat(chat)
         print(command, msg, chat)
 
         if command == '/new':
@@ -78,7 +85,7 @@ def handle_updates(updates):
 
         elif command == '/duedate':
             set_due_date(chat, msg)
-            
+
         elif command == '/setdescription':
             set_description(chat, msg)
 
@@ -93,6 +100,24 @@ def handle_updates(updates):
         elif command == '/help':
             send_message("Here is a list of things you can do.", chat)
             send_message(HELP, chat)
+
+        elif command == '/createissue':
+            GitApiHandlher.create_issue(msg, chat)
+
+        elif command == '/authorizegit':
+            GitApiHandlher.authorize_git(chat)
+
+        elif command == '/code':
+            GitApiHandlher.get_token_accsses(msg, chat)
+
+        elif command == '/listrepositories':
+            query = db.session.query(User).filter_by(chat_id=chat)
+            user = query.one()
+
+            if user.github_access_token is None:
+                send_message("You have to auhtorize the application first, please use the command: '/authorize_git' and follow the instructions.", chat)
+            else:
+                GitApiHandlher.list_repositories(user.github_access_token, chat)
 
         else:
             send_message("I'm sorry dave. I'm afraid I can't do that.", chat)
